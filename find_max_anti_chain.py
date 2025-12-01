@@ -3,45 +3,45 @@ import networkx as nx
 # Please install networkx by 'pip install networkx==3.6'
 
 def max_anti_chain_size(dag_dict):
-    # Finds the maximum anti-chain size in a DAG, which is the size of the largest S in Kahn's algorithm
     nodes = set(dag_dict.keys())
-    
     for neighbors in dag_dict.values():
         nodes.update(neighbors)
-    node_list = sorted(list(nodes))
-    num_nodes = len(node_list)
-
-    if num_nodes == 0:
+    if not nodes:
         return 0
 
-    G_flow = nx.DiGraph()
-    source = 's'
-    sink = 't'
+    G = nx.DiGraph()
+    for u in dag_dict:
+        for v in dag_dict[u]:
+            G.add_edge(u, v)
 
-    for u in node_list:
+    if not nx.is_directed_acyclic_graph(G):
+        raise ValueError("Input graph is not a DAG")
+
+    G_tc = nx.transitive_closure(G)
+
+    G_flow = nx.DiGraph()
+    source = "s"
+    sink = "t"
+
+    for u in G_tc.nodes():
         u_in = f"{u}_in"
         u_out = f"{u}_out"
-
         G_flow.add_edge(source, u_in, capacity=1)
-
         G_flow.add_edge(u_out, sink, capacity=1)
 
-        if u in dag_dict:
-            for v in dag_dict[u]:
-                v_in = f"{v}_in"
-                v_out = f"{v}_out"
-                
-                G_flow.add_edge(u_in, v_out, capacity=1)
-    
+    for u, v in G_tc.edges():
+        if u == v:
+            continue
+        u_in = f"{u}_in"
+        v_out = f"{v}_out"
+        G_flow.add_edge(u_in, v_out, capacity=1)
+
+    # Max flow = maximum matching size
     flow_value, _ = nx.maximum_flow(G_flow, source, sink)
-    
-    min_path_cover_edges = flow_value
-    
-    min_path_cover_paths = num_nodes - min_path_cover_edges
 
-    s_max = min_path_cover_paths
+    num_nodes = len(G_tc.nodes())
 
-    return s_max
+    return num_nodes - flow_value
 
 if __name__ == "__main__":
     # Example 1: A simple path graph (Width = 1)
